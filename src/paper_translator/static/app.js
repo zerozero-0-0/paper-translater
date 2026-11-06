@@ -292,12 +292,12 @@ function mathNode(tex, fallback) {
   }
 }
 
-function renderText(node, rawText) {
+function renderText(node, rawText, symbols = []) {
   // 脚注記号は添字として抽出されるので、記号だけに戻す
   const text = rawText.replace(/\^([∗†‡]+)/gu, "$1");
   const parts = [];
   let position = 0;
-  const matches = [...citationMatches(text), ...mathMatches(text)].sort((a, b) => a.start - b.start);
+  const matches = [...citationMatches(text), ...mathMatches(text, symbols)].sort((a, b) => a.start - b.start);
   for (const { start, end, idx, tex } of matches) {
     if (start < position) continue;
     const raw = text.slice(start, end);
@@ -326,7 +326,8 @@ function fillSegment(node, segment) {
   node.classList.remove("pending", "failed");
   if (segment.status === "pending") node.classList.add("pending");
   if (segment.status === "failed") node.classList.add("failed");
-  renderText(node, segment.translation || segment.source);
+  const symbols = segment.translation ? JSON.parse(node.dataset.symbols || "[]") : [];
+  renderText(node, segment.translation || segment.source, symbols);
 }
 
 function renderSegments(paper) {
@@ -335,6 +336,7 @@ function renderSegments(paper) {
     node.id = `segment-${segment.idx}`;
     node.dataset.idx = segment.idx;
     node.dataset.source = segment.source;
+    node.dataset.symbols = JSON.stringify(segment.symbols);
     if (IMAGE_KINDS.includes(segment.kind)) {
       const image = element("img");
       image.loading = "lazy";

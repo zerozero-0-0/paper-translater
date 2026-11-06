@@ -9,6 +9,9 @@ const MATH_PATTERN = new RegExp(
   "gu",
 );
 
+const BIG_O = /(?<![\w.])O\(((?:[^()]|\([^()]*\))*)\)/gu;
+const LONE_LETTER = /(?<![A-Za-z0-9α-ωΑ-Ωϵ_^√/.'’-])[A-Za-zα-ωΑ-Ωϵ](?![A-Za-z0-9α-ωΑ-Ωϵ_^/'’-])/gu;
+
 function texWord(word) {
   return word.length > 2 && /^[A-Za-z]+$/.test(word) ? `\\mathrm{${word}}` : word;
 }
@@ -39,17 +42,43 @@ function texScripted(base, scripts) {
   return texWord(base) + parts.map(([, marker, script]) => `${marker}{${texScript(script)}}`).join("");
 }
 
-function mathMatches(text) {
+function texBigO(inner) {
+  const body = inner
+    .replace(/log_(\w+)/g, "\\log_{$1}")
+    .replace(/\blog\b/g, "\\log")
+    .replace(/\^([\w−-]+)/g, (_, power) => `^{${power.replaceAll("−", "-")}}`)
+    .replace(/(?<![\\\w])([A-Za-z])_(\w+)/g, "$1_{$2}")
+    .replaceAll("·", " \\cdot ")
+    .replaceAll("×", " \\times ");
+  return `O(${body})`;
+}
+
+function overlaps(matches, start, end) {
+  return matches.some((match) => start < match.end && match.start < end);
+}
+
+// symbols は PDF で変数として組まれていた文字。ここにある字だけを変数として扱う
+function mathMatches(text, symbols = []) {
   const matches = [];
+  for (const match of text.matchAll(BIG_O)) {
+    matches.push({ start: match.index, end: match.index + match[0].length, tex: texBigO(match[1]) });
+  }
   for (const match of text.matchAll(MATH_PATTERN)) {
     const { numerator, fractionRoot, root, base, scripts } = match.groups;
     let tex = null;
     if (numerator) tex = `\\frac{${numerator}}{${texRoot(fractionRoot)}}`;
     else if (root) tex = texRoot(root);
     else tex = texScripted(base, scripts);
-    if (tex) matches.push({ start: match.index, end: match.index + match[0].length, tex });
+    const end = match.index + match[0].length;
+    if (tex && !overlaps(matches, match.index, end)) matches.push({ start: match.index, end, tex });
   }
-  return matches;
+  for (const match of text.matchAll(LONE_LETTER)) {
+    const end = match.index + match[0].length;
+    if (symbols.includes(match[0]) && !overlaps(matches, match.index, end)) {
+      matches.push({ start: match.index, end, tex: match[0] });
+    }
+  }
+  return matches.sort((a, b) => a.start - b.start);
 }
 
 if (typeof module !== "undefined") module.exports = { mathMatches };

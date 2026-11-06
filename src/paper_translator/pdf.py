@@ -15,6 +15,9 @@ NUMBERED_REFERENCE = re.compile(r"^\[(\d+)\]")
 SENTENCE_END = (".", "?", "!", ":", ";")
 FIGURE_MARGIN = 14
 MAX_CAPTION_GAP = 60
+# 変数に使う数式用イタリック。本文が Computer Modern の論文でも誤検出しないよう CMR は含めない
+VARIABLE_FONT = re.compile(r"^(CMMI|STIX.*Italic|.*Math.*Italic)", re.I)
+VARIABLE = re.compile(r"(?<![A-Za-z])[A-Za-zα-ωΑ-Ωϵ](?![A-Za-z])")
 MATH_FONT = re.compile(r"^(CM|MSBM|MSAM|STIX|Cambria.?Math|.*Math|Symbol)", re.I)
 
 
@@ -28,6 +31,7 @@ class Block:
     text: str = ""
     tail: tuple[float, float, float, float] = (0, 0, 0, 0)
     visual: tuple[float, float, float, float] | None = None
+    symbols: set[str] = field(default_factory=set)
 
 
 @dataclass
@@ -44,6 +48,12 @@ class Segment:
     page: int
     source: str
     boxes: list[list[float]] = field(default_factory=list)
+    symbols: list[str] = field(default_factory=list)
+
+    def absorb(self, other: "Segment") -> None:
+        self.source += " " + other.source
+        self.boxes += other.boxes
+        self.symbols = sorted({*self.symbols, *other.symbols})
 
 
 def _line_text(spans: list[dict]) -> str:
@@ -106,6 +116,7 @@ def _read_blocks(page: pymupdf.Page, page_no: int) -> list[Block]:
     blocks = []
     for raw in page.get_text("dict", flags=FLAGS)["blocks"]:
         rows, sizes, bold_chars, chars = [], Counter(), 0, 0
+        symbols: set[str] = set()
         for line in raw.get("lines", []):
             if abs(line["dir"][1]) > 0.01:  # arXiv の透かしなどの回転文字
                 continue
@@ -114,6 +125,8 @@ def _read_blocks(page: pymupdf.Page, page_no: int) -> list[Block]:
                 continue
             rows.append((text, tuple(line["bbox"]), max(span["size"] for span in line["spans"])))
             for span in line["spans"]:
+                if VARIABLE_FONT.match(span["font"]):
+                    symbols.update(VARIABLE.findall(span["text"]))
                 n = len(span["text"].strip())
                 sizes[round(span["size"] * 2) / 2] += n
                 chars += n
@@ -123,7 +136,8 @@ def _read_blocks(page: pymupdf.Page, page_no: int) -> list[Block]:
             rows = _join_fraction(rows)
             size = sizes.most_common(1)[0][0]
             lines = [row[0] for row in rows]
-            blocks.append(Block(page_no, tuple(raw["bbox"]), lines, size, bold_chars > chars * 0.8, tail=rows[-1][1]))
+            bold = bold_chars > chars * 0.8
+            blocks.append(Block(page_no, tuple(raw["bbox"]), lines, size, bold, tail=rows[-1][1], symbols=symbols))
     return blocks
 
 
@@ -147,6 +161,7 @@ def _merge_same_line(blocks: list[Block]) -> list[Block]:
         target.lines[-1] += joiner + " ".join(block.lines)
         target.bbox = tuple(pymupdf.Rect(target.bbox) | pymupdf.Rect(block.bbox))
         target.tail = block.tail
+        target.symbols |= block.symbols
     return merged
 
 
@@ -360,7 +375,7 @@ def _classify(blocks: list[Block], body_size: float, page_heights: list[float]) 
             kind = "heading" if len(text) < 20 else "text"
         if block.visual:
             segments.append(Segment("figure", block.page, "", [[block.page, *block.visual]]))
-        segments.append(Segment(kind, block.page, text, [[block.page, *block.bbox]]))
+        segments.append(Segment(kind, block.page, text, [[block.page, *block.bbox]], sorted(block.symbols)))
     return segments
 
 
@@ -371,20 +386,17 @@ def _merge(segments: list[Segment]) -> list[Segment]:
     open_note: Segment | None = None
     for segment in segments:
         if segment.kind in ("equation", "title") and merged and merged[-1].kind == segment.kind:
-            merged[-1].source += " " + segment.source
-            merged[-1].boxes += segment.boxes
+            merged[-1].absorb(segment)
             continue
         if segment.kind == "footnote" and open_note and not open_note.source.endswith(SENTENCE_END):
-            open_note.source += " " + segment.source
-            open_note.boxes += segment.boxes
+            open_note.absorb(segment)
             continue
         if segment.kind == "text" and open_text is not None:
             last = open_text.boxes[-1]
             box = segment.boxes[0]
             moved = box[0] != last[0] or abs(box[1] - last[1]) > 100
             if not open_text.source.endswith(SENTENCE_END) and (moved or segment.source[:1].islower()):
-                open_text.source += " " + segment.source
-                open_text.boxes += segment.boxes
+                open_text.absorb(segment)
                 continue
         merged.append(segment)
         open_note = segment if segment.kind == "footnote" else open_note

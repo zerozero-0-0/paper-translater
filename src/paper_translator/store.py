@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS segments (
     source TEXT NOT NULL,
     translation TEXT,
     status TEXT NOT NULL,
+    symbols TEXT NOT NULL DEFAULT '[]',
     PRIMARY KEY (paper_id, idx)
 );
 """
@@ -37,6 +38,9 @@ class Store:
         with closing(self._connect()) as db, db:
             db.execute("PRAGMA journal_mode=WAL")
             db.executescript(SCHEMA)
+            columns = [row["name"] for row in db.execute("PRAGMA table_info(segments)")]
+            if "symbols" not in columns:
+                db.execute("ALTER TABLE segments ADD COLUMN symbols TEXT NOT NULL DEFAULT '[]'")
 
     def _connect(self) -> sqlite3.Connection:
         db = sqlite3.connect(self.path)
@@ -54,6 +58,7 @@ class Store:
                 json.dumps(s.boxes),
                 s.source,
                 "pending" if s.kind in TRANSLATED_KINDS else "skipped",
+                json.dumps(s.symbols),
             )
             for idx, s in enumerate(segments)
         ]
@@ -63,9 +68,13 @@ class Store:
                 (paper_id, filename, title, json.dumps(pages), time.time()),
             )
             db.executemany(
-                "INSERT INTO segments (paper_id, idx, kind, page, boxes, source, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO segments (paper_id, idx, kind, page, boxes, source, status, symbols) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 rows,
             )
+
+    def _segment_dict(self, row: sqlite3.Row) -> dict:
+        return {**dict(row), "boxes": json.loads(row["boxes"]), "symbols": json.loads(row["symbols"])}
 
     def _paper_dict(self, db: sqlite3.Connection, row: sqlite3.Row) -> dict:
         counts = db.execute(
@@ -89,12 +98,12 @@ class Store:
     def segments(self, paper_id: str) -> list[dict]:
         with closing(self._connect()) as db:
             rows = db.execute("SELECT * FROM segments WHERE paper_id = ? ORDER BY idx", (paper_id,)).fetchall()
-        return [{**dict(row), "boxes": json.loads(row["boxes"])} for row in rows]
+        return [self._segment_dict(row) for row in rows]
 
     def segment(self, paper_id: str, idx: int) -> dict | None:
         with closing(self._connect()) as db:
             row = db.execute("SELECT * FROM segments WHERE paper_id = ? AND idx = ?", (paper_id, idx)).fetchone()
-        return {**dict(row), "boxes": json.loads(row["boxes"])} if row else None
+        return self._segment_dict(row) if row else None
 
     def next_pending(self, paper_id: str) -> dict | None:
         with closing(self._connect()) as db:

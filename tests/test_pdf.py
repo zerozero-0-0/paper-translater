@@ -1,6 +1,8 @@
 import pymupdf
 
 from paper_translator.pdf import (
+    VARIABLE,
+    VARIABLE_FONT,
     Block,
     Segment,
     _is_figure_label,
@@ -197,3 +199,13 @@ def test_reference_index_handles_single_author_without_comma():
         {"kind": "reference", "idx": 1, "source": "Wilson L Taylor. 1953. Cloze procedure. Journalism Bulletin."}
     ]
     assert reference_index(segments)["authors"] == {"taylor 1953": 1}
+
+
+def test_variables_are_collected_only_from_math_italic_fonts():
+    spans = [
+        {"text": "a sequence of length ", "size": 10.0, "origin": (0, 100), "font": "NimbusRomNo9L"},
+        {"text": "n", "size": 10.0, "origin": (0, 100), "font": "CMMI10"},
+    ]
+    assert not VARIABLE_FONT.match(spans[0]["font"])
+    assert VARIABLE.findall(spans[1]["text"]) == ["n"]
+    assert VARIABLE.findall("Q, K, V") == ["Q", "K", "V"]
