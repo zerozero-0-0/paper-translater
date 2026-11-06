@@ -4,7 +4,8 @@ const MATH_PATTERN = new RegExp(
   [
     "(?<![\\w.])(?<numerator>\\d+)/√(?<fractionRoot>[A-Za-z]+(?:_[A-Za-z0-9]+)?)",
     "√(?<root>[A-Za-z]+(?:_[A-Za-z0-9]+)?)",
-    `(?<![\\w/])(?<base>[A-Za-z0-9α-ωΑ-Ωϵ]+)(?<scripts>(?:[_^]${SCRIPT})+)`,
+    `(?<![\\w/])(?<base>[A-Za-z0-9α-ωΑ-Ωϵℝℕℤℂℚ]+)(?<scripts>(?:[_^](?:\\{[^{}]+\\}|${SCRIPT}))+)`,
+    "(?<symbol>[ℝℕℤℂℚ∈])",
   ].join("|"),
   "gu",
 );
@@ -12,13 +13,18 @@ const MATH_PATTERN = new RegExp(
 const BIG_O = /(?<![\w.])O\(((?:[^()]|\([^()]*\))*)\)/gu;
 const LONE_LETTER = /(?<![A-Za-z0-9α-ωΑ-Ωϵ_^√/.'’-])[A-Za-zα-ωΑ-Ωϵ](?![A-Za-z0-9α-ωΑ-Ωϵ_^/'’-])/gu;
 
+const BLACKBOARD = { ℝ: "R", ℕ: "N", ℤ: "Z", ℂ: "C", ℚ: "Q" };
+
 function texWord(word) {
+  if (word in BLACKBOARD) return `\\mathbb{${BLACKBOARD[word]}}`;
   return word.length > 2 && /^[A-Za-z]+$/.test(word) ? `\\mathrm{${word}}` : word;
 }
 
 function texScript(script) {
   return script
-    .replace(/[A-Za-z]{3,}/g, (word) => `\\mathrm{${word}}`)
+    .replace(/^\{|\}$/g, "")
+    .replace(/_(\w+)/g, (_, word) => `_{${word.length > 2 ? `\\mathrm{${word}}` : word}}`)
+    .replace(/(?<![_{\\A-Za-z])[A-Za-z]{3,}/g, (word) => `\\mathrm{${word}}`)
     .replaceAll("−", "-")
     .replaceAll("×", "\\times ");
 }
@@ -38,7 +44,7 @@ function isIdentifier(base, scripts) {
 function texScripted(base, scripts) {
   if (isIdentifier(base, scripts)) return null;
   if (/^\d+$/.test(base) && scripts.startsWith("_")) return null;
-  const parts = [...scripts.matchAll(new RegExp(`([_^])(${SCRIPT})`, "gu"))];
+  const parts = [...scripts.matchAll(new RegExp(`([_^])(\\{[^{}]+\\}|${SCRIPT})`, "gu"))];
   return texWord(base) + parts.map(([, marker, script]) => `${marker}{${texScript(script)}}`).join("");
 }
 
@@ -64,10 +70,11 @@ function mathMatches(text, symbols = []) {
     matches.push({ start: match.index, end: match.index + match[0].length, tex: texBigO(match[1]) });
   }
   for (const match of text.matchAll(MATH_PATTERN)) {
-    const { numerator, fractionRoot, root, base, scripts } = match.groups;
+    const { numerator, fractionRoot, root, base, scripts, symbol } = match.groups;
     let tex = null;
     if (numerator) tex = `\\frac{${numerator}}{${texRoot(fractionRoot)}}`;
     else if (root) tex = texRoot(root);
+    else if (symbol) tex = symbol === "∈" ? "\\in" : texWord(symbol);
     else tex = texScripted(base, scripts);
     const end = match.index + match[0].length;
     if (tex && !overlaps(matches, match.index, end)) matches.push({ start: match.index, end, tex });

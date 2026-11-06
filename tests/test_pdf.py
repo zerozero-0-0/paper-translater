@@ -103,6 +103,27 @@ def test_line_text_restores_subscript_and_superscript():
     assert _line_text(spans) == "values of dimension d_k and W^O"
 
 
+def test_line_text_keeps_nested_subscripts_and_blackboard_letters():
+    spans = [
+        span("W"),
+        span("O", 7.0, 96.0),
+        span(" ∈", font="CMSY10"),
+        span("R", font="MSBM10"),
+        span("h", 7.0, 96.0),
+        span("d", 7.0, 96.0),
+        span("v", 5.0, 97.0),
+        span("×", 7.0, 96.0, "CMSY7"),
+        span("d", 7.0, 96.0),
+        span("model", 5.0, 97.0, "NimbusRomNo9L"),
+    ]
+    assert _line_text(spans) == "W^O ∈ℝ^{hd_v×d_model}"
+
+
+def test_line_text_ignores_small_text_when_choosing_the_baseline():
+    spans = [span("R", font="MSBM10"), span("dmodel", 7.0, 96.0)]
+    assert _line_text(spans) == "ℝ^dmodel"
+
+
 def test_line_text_keeps_footnote_marker_in_prose_font():
     spans = [span("small gradients", font="Nimbus"), span("4", 7.0, 96.0, "Nimbus"), span(".", font="Nimbus")]
     assert _line_text(spans) == "small gradients4."

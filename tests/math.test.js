@@ -42,6 +42,15 @@ test("lone letters become variables only when the PDF set them as variables", ()
   assert.deepEqual(variables("d_k と d", ["d", "k"]), ["d_{k}", "d"]);
 });
 
+test("real numbers and nested subscripts", () => {
+  assert.deepEqual(tex("W^O ∈ℝ^{hd_v×d_model}"), [
+    "W^{O}",
+    "\\in",
+    "\\mathbb{R}^{hd_{v}\\times d_{\\mathrm{model}}}",
+  ]);
+  assert.deepEqual(tex("x ∈ ℝ"), ["\\in", "\\mathbb{R}"]);
+});
+
 test("reports positions for replacement", () => {
   const [match] = mathMatches("値 d_k です");
   assert.equal("値 d_k です".slice(match.start, match.end), "d_k");

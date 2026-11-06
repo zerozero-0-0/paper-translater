@@ -18,6 +18,8 @@ MAX_CAPTION_GAP = 60
 # 変数に使う数式用イタリック。本文が Computer Modern の論文でも誤検出しないよう CMR は含めない
 VARIABLE_FONT = re.compile(r"^(CMMI|STIX.*Italic|.*Math.*Italic)", re.I)
 VARIABLE = re.compile(r"(?<![A-Za-z])[A-Za-zα-ωΑ-Ωϵ](?![A-Za-z])")
+BLACKBOARD_FONT = re.compile(r"^(MSBM|.*Blackboard)", re.I)
+BLACKBOARD = {"R": "ℝ", "N": "ℕ", "Z": "ℤ", "C": "ℂ", "Q": "ℚ"}
 MATH_FONT = re.compile(r"^(CM|MSBM|MSAM|STIX|Cambria.?Math|.*Math|Symbol)", re.I)
 
 
@@ -57,38 +59,66 @@ class Segment:
 
 
 def _line_text(spans: list[dict]) -> str:
-    """文字サイズとベースラインの差から添字を d_k、W^O の形で復元する。"""
+    """文字サイズとベースラインの差から添字を d_k、W^O、ℝ^{hd_v} の形で復元する。"""
     visible = [span for span in spans if span["text"].strip()]
     if not visible:
         return ""
-    weights = Counter()
+    base_size = max(span["size"] for span in visible)
+    baselines = Counter()
     for span in visible:
-        weights[(round(span["size"], 1), round(span["origin"][1], 1))] += len(span["text"].strip())
-    base_size, base_y = weights.most_common(1)[0][0]
+        if span["size"] > base_size * 0.85:
+            baselines[round(span["origin"][1], 1)] += len(span["text"].strip())
+    base_y = baselines.most_common(1)[0][0]
 
     text = ""
+    script: list[str] = []
+    marker = ""
+    script_size = script_y = 0.0
     previous = ""
+
+    def flush() -> None:
+        nonlocal text, marker, previous
+        if script:
+            body = "".join(script)
+            text = text.rstrip() + marker + (f"{{{body}}}" if "_" in body else body)
+            script.clear()
+            previous = marker
+            marker = ""
+
     for span in spans:
         raw = span["text"]
         body = raw.strip()
-        math = bool(MATH_FONT.match(span["font"]))
-        shift = span["origin"][1] - base_y
-        marker = ""
-        if body and span["size"] <= base_size * 0.85 and (math or not body.isdigit()):
-            if shift > 0.5:
-                marker = "_"
-            elif shift < -0.5 or math:
-                marker = "^"
         if not body:
-            text += raw
-        elif not marker:
+            if not script:
+                text += raw
+            continue
+        font = span["font"]
+        math = bool(MATH_FONT.match(font))
+        if BLACKBOARD_FONT.match(font):
+            body = BLACKBOARD.get(body, body)
+            raw = raw.replace(raw.strip(), body)
+        shift = span["origin"][1] - base_y
+        current = ""
+        if span["size"] <= base_size * 0.85 and (math or not body.isdigit()):
+            if shift > 0.5:
+                current = "_"
+            elif shift < -0.5 or math:
+                current = "^"
+        if not current:
+            flush()
             text += raw
             previous = ""
-        elif marker == previous:
-            text = text.rstrip() + body
+        elif script and current == marker:
+            nested = span["size"] <= script_size * 0.85 and span["origin"][1] > script_y + 0.3
+            script.append(f"_{body}" if nested else body)
         else:
-            text = text.rstrip() + marker + body
-            previous = marker
+            flush()
+            if current == previous:
+                text = text.rstrip() + body
+                continue
+            marker, script_size, script_y = current, span["size"], span["origin"][1]
+            script.append(body)
+    flush()
     return text.strip()
 
 
