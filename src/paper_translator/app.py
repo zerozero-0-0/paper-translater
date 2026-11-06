@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import pymupdf
-from fastapi import FastAPI, HTTPException, Response, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Response, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -53,7 +53,7 @@ def render_segment(source: Path, boxes: list[list[float]]) -> bytes:
         return document[int(page)].get_pixmap(dpi=EQUATION_DPI, clip=clip + (-4, -4, 4, 4)).tobytes("png")
 
 
-def to_markdown(segments: list[dict]) -> str:
+def to_markdown(segments: list[dict], model_label: str) -> str:
     lines = []
     for segment in segments:
         text = segment["translation"] or segment["source"]
@@ -68,6 +68,7 @@ def to_markdown(segments: list[dict]) -> str:
                 lines.append(f"> {text}")
             case "text":
                 lines.append(text)
+    lines.append(f"---\n\nこの訳文は PLaMo 3 Translate {model_label} による機械翻訳の生成物です。Built with PLaMo")
     return "\n\n".join(lines) + "\n"
 
 
@@ -95,12 +96,23 @@ def create_app(config: Config, server: LlamaServer | None = None) -> FastAPI:
             raise HTTPException(404, "論文が見つかりません")
         return paper
 
+    @app.get("/api/models")
+    def list_models() -> dict:
+        models = [
+            {"key": model.key, "label": model.label, "available": model.path.exists()}
+            for model in config.models.values()
+        ]
+        return {"default": config.default_model, "models": models}
+
     @app.get("/api/papers")
     def list_papers() -> list[dict]:
         return store.papers()
 
     @app.post("/api/papers", status_code=201)
-    async def upload(file: UploadFile) -> dict:
+    async def upload(file: UploadFile, model: str | None = Form(None)) -> dict:
+        model = model or config.default_model
+        if model not in config.models:
+            raise HTTPException(400, "指定されたモデルがありません")
         data = await file.read()
         paper_id = hashlib.sha256(data).hexdigest()
         if existing := store.paper(paper_id):
@@ -121,7 +133,7 @@ def create_app(config: Config, server: LlamaServer | None = None) -> FastAPI:
             raise HTTPException(400, "PDF を読み込めませんでした") from error
 
         title = next((s.source for s in segments if s.kind == "title"), file.filename or "無題")
-        store.add_paper(paper_id, file.filename or "paper.pdf", title, pages, segments)
+        store.add_paper(paper_id, file.filename or "paper.pdf", title, pages, segments, model)
         worker.wake.set()
         return get_paper(paper_id)
 
@@ -174,8 +186,8 @@ def create_app(config: Config, server: LlamaServer | None = None) -> FastAPI:
 
     @app.get("/api/papers/{paper_id}/export.md")
     def export(paper_id: str) -> PlainTextResponse:
-        get_paper(paper_id)
-        return PlainTextResponse(to_markdown(store.segments(paper_id)), media_type="text/markdown")
+        label = config.models[get_paper(paper_id)["model"]].label
+        return PlainTextResponse(to_markdown(store.segments(paper_id), label), media_type="text/markdown")
 
     @app.get("/api/papers/{paper_id}/events")
     async def events(paper_id: str) -> StreamingResponse:

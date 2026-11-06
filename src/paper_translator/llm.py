@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from .config import Config
+from .config import Config, Model, find_binary
 
 HISTORY_CHAR_LIMIT = 6000
 STARTUP_TIMEOUT_SECONDS = 120
@@ -28,6 +28,7 @@ class LlamaServer:
         self.config = config
         self.base_url = f"http://127.0.0.1:{config.port}"
         self.process: asyncio.subprocess.Process | None = None
+        self.model: str | None = None
         self.log_path = config.data_dir / "llama.log"
         self.client = httpx.AsyncClient(timeout=httpx.Timeout(600, connect=5))
 
@@ -35,27 +36,35 @@ class LlamaServer:
     def running(self) -> bool:
         return self.process is not None and self.process.returncode is None
 
-    async def start(self) -> None:
-        if self.running:
-            return
+    def command(self, model: Model) -> list[str]:
         config = self.config
-        if not config.binary.exists():
-            raise ServerError(f"llama が見つかりません: {config.binary}")
-        if not config.model.exists():
-            raise ServerError(f"モデルが見つかりません: {config.model}")
+        binary = find_binary(config.binary)
+        if binary is None:
+            raise ServerError("llama.cpp が見つかりません。`uv run paper-translator setup` で確認してください")
+        if not model.path.exists():
+            raise ServerError(f"{model.label} のモデルがありません。`uv run paper-translator setup` で取得してください")
+        command = [str(binary)] + (["serve"] if binary.name == "llama" else [])
+        command += ["-m", str(model.path), "--jinja", "--no-prefill-assistant", "--offline", "--no-webui"]
+        command += ["--host", "127.0.0.1", "--port", str(config.port), "-c", str(config.ctx_size), "-np", "1"]
+        draft = config.models.get(model.draft or "")
+        if draft and draft.path.exists():
+            command += ["-md", str(draft.path), "--spec-type", "draft-simple"]
+            command += ["--spec-draft-n-max", str(model.draft_max)]
+        return command
+
+    async def start(self, model_key: str) -> None:
+        if self.running and self.model == model_key:
+            return
+        await self.stop()
+        command = self.command(self.config.models[model_key])
+        self.log_path.parent.mkdir(parents=True, exist_ok=True)
         with self.log_path.open("w") as log:
             self.process = await asyncio.create_subprocess_exec(
-                str(config.binary), "serve",
-                "-m", str(config.model),
-                "--chat-template-file", str(config.template),
-                "--jinja", "--offline", "--no-webui",
-                "--host", "127.0.0.1",
-                "--port", str(config.port),
-                "-c", str(config.ctx_size),
-                "-np", "1",
+                *command,
                 stdout=log,
                 stderr=asyncio.subprocess.STDOUT,
-            )  # fmt: skip
+            )
+        self.model = model_key
         await self._wait_until_ready()
 
     async def _wait_until_ready(self) -> None:

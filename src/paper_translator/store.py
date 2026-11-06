@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS papers (
     pages TEXT NOT NULL,
     status TEXT NOT NULL,
     error TEXT,
-    created_at REAL NOT NULL
+    created_at REAL NOT NULL,
+    model TEXT NOT NULL DEFAULT 'plamo-8b'
 );
 CREATE TABLE IF NOT EXISTS segments (
     paper_id TEXT NOT NULL REFERENCES papers(id) ON DELETE CASCADE,
@@ -38,9 +39,13 @@ class Store:
         with closing(self._connect()) as db, db:
             db.execute("PRAGMA journal_mode=WAL")
             db.executescript(SCHEMA)
-            columns = [row["name"] for row in db.execute("PRAGMA table_info(segments)")]
-            if "symbols" not in columns:
-                db.execute("ALTER TABLE segments ADD COLUMN symbols TEXT NOT NULL DEFAULT '[]'")
+            self._add_column(db, "segments", "symbols", "TEXT NOT NULL DEFAULT '[]'")
+            self._add_column(db, "papers", "model", "TEXT NOT NULL DEFAULT 'plamo-8b'")
+
+    @staticmethod
+    def _add_column(db: sqlite3.Connection, table: str, column: str, definition: str) -> None:
+        if column not in [row["name"] for row in db.execute(f"PRAGMA table_info({table})")]:
+            db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def _connect(self) -> sqlite3.Connection:
         db = sqlite3.connect(self.path)
@@ -48,7 +53,9 @@ class Store:
         db.execute("PRAGMA foreign_keys=ON")
         return db
 
-    def add_paper(self, paper_id: str, filename: str, title: str, pages: list, segments: list[Segment]) -> None:
+    def add_paper(
+        self, paper_id: str, filename: str, title: str, pages: list, segments: list[Segment], model: str = "plamo-8b"
+    ) -> None:
         rows = [
             (
                 paper_id,
@@ -64,8 +71,9 @@ class Store:
         ]
         with closing(self._connect()) as db, db:
             db.execute(
-                "INSERT INTO papers VALUES (?, ?, ?, ?, 'queued', NULL, ?)",
-                (paper_id, filename, title, json.dumps(pages), time.time()),
+                "INSERT INTO papers (id, filename, title, pages, status, created_at, model) "
+                "VALUES (?, ?, ?, ?, 'queued', ?, ?)",
+                (paper_id, filename, title, json.dumps(pages), time.time(), model),
             )
             db.executemany(
                 "INSERT INTO segments (paper_id, idx, kind, page, boxes, source, status, symbols) "

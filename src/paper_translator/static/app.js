@@ -4,6 +4,7 @@ const MARKED_SKIPPED_KINDS = [...IMAGE_KINDS, "reference"];
 const ANCHOR_KINDS = ["heading", "text", "equation", "reference"];
 const READING_LINE = 0.3;
 const SYNC_STORAGE_KEY = "scroll-sync";
+const MODEL_STORAGE_KEY = "model";
 const STATUS_LABELS = { queued: "待機中", translating: "翻訳中", paused: "一時停止", done: "完了", error: "エラー" };
 const NUMERIC_CITATION = /\[(\d+(?:\s*[,;]\s*\d+)*)\]/gu;
 const AUTHOR_CITATION = /(\p{Lu}[\p{Script=Latin}'’-]+)(?:\s+et al\.?|\s+and\s+\p{Lu}[\p{Script=Latin}'’-]+|ら|\s*&\s*\p{Lu}[\p{Script=Latin}'’-]+)?(?:,\s*|\s*[（(]\s*)((?:19|20)\d{2}[a-z]?)/gu;
@@ -16,6 +17,8 @@ let leader = null;
 let anchors = null;
 let syncFrame = 0;
 let syncEnabled = loadSyncPreference();
+let models = [];
+let selectedModel = null;
 
 async function api(path, options) {
   const response = await fetch(`/api/papers${path}`, options);
@@ -60,6 +63,7 @@ function paperState(paper) {
 async function showLibrary() {
   closeEvents();
   closeCitation();
+  renderNotice(null);
   current = null;
   document.body.dataset.screen = "library";
   $("library").hidden = false;
@@ -77,7 +81,8 @@ async function showLibrary() {
     const link = element("a");
     link.href = `#${paper.id}`;
     const state = paperState(paper);
-    const meta = element("small", "", paper.filename);
+    const label = models.find((model) => model.key === paper.model)?.label;
+    const meta = element("small", "", label ? `${paper.filename} ・ ${label}` : paper.filename);
     if (state) meta.append(" ・ ", element("span", state.className, state.text));
     link.append(element("span", "paper-name", paper.title), meta);
     const remove = iconButton("trash", "削除");
@@ -356,7 +361,53 @@ function renderSegments(paper) {
   $("segments").scrollTop = 0;
 }
 
+function renderNotice(paper) {
+  const message = paper?.status === "error" ? paper.error : "";
+  $("notice").textContent = message ?? "";
+  $("notice").hidden = !message;
+}
+
+function loadModelPreference() {
+  try {
+    return localStorage.getItem(MODEL_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function selectModel(key) {
+  selectedModel = key;
+  for (const button of $("model-toggle").children) {
+    button.setAttribute("aria-pressed", button.dataset.model === key);
+  }
+  try {
+    localStorage.setItem(MODEL_STORAGE_KEY, key);
+  } catch {
+    // 保存できなくても今の画面では動く
+  }
+}
+
+async function loadModels() {
+  const response = await fetch("/api/models");
+  const data = await response.json();
+  models = data.models;
+  const buttons = models.map((model) => {
+    const button = element("button", "", model.label);
+    button.type = "button";
+    button.dataset.model = model.key;
+    button.disabled = !model.available;
+    button.title = model.available ? `${model.label} で翻訳する` : "`uv run paper-translator setup` で取得できます";
+    button.addEventListener("click", () => selectModel(model.key));
+    return button;
+  });
+  $("model-toggle").replaceChildren(...buttons);
+  const saved = loadModelPreference();
+  const usable = models.find((model) => model.key === saved && model.available);
+  selectModel(usable?.key ?? data.default);
+}
+
 function renderStatus(paper) {
+  renderNotice(paper);
   const active = paper.status === "translating" || paper.status === "queued";
   const state = paperState(paper);
   const finished = !state;
@@ -426,6 +477,7 @@ async function upload(file) {
   $("message").textContent = "";
   const body = new FormData();
   body.append("file", file);
+  if (selectedModel) body.append("model", selectedModel);
   try {
     const paper = await api("", { method: "POST", body });
     location.hash = paper.id;
@@ -517,4 +569,4 @@ window.addEventListener("drop", (event) => {
 });
 
 window.addEventListener("hashchange", route);
-route();
+loadModels().finally(route);

@@ -27,7 +27,7 @@
     </a>
     <div id="controls" class="controls" hidden>
       <span id="progress-label" class="progress-label"></span>
-      <div class="view-toggle" role="group" aria-label="表示する言語">
+      <div class="segmented view-toggle" role="group" aria-label="表示する言語">
         <button id="view-ja" type="button" aria-pressed="true">日</button>
         <button id="view-en" type="button" aria-pressed="false">英</button>
       </div>
@@ -49,7 +49,10 @@
   </header>
 
   <main id="library" class="library">
-    <h1>論文</h1>
+    <div class="library-head">
+      <h1>論文</h1>
+      <div id="model-toggle" class="segmented" role="group" aria-label="翻訳モデル"></div>
+    </div>
     <button id="open-file" class="drop-panel" type="button">
       <svg class="icon" aria-hidden="true"><use href="#icon-upload"/></svg>
       <strong>PDF をドロップ</strong>
@@ -59,7 +62,10 @@
     <p id="message" class="message" role="status"></p>
     <ul id="papers" class="papers"></ul>
     <p id="empty" class="empty" hidden>まだ論文がありません。</p>
+    <p class="credit">Built with PLaMo</p>
   </main>
+
+  <p id="notice" class="notice" role="alert" hidden></p>
 
   <main id="reader" class="reader" data-view="ja" hidden>
     <section id="pages" class="pane pages" aria-label="原文"></section>

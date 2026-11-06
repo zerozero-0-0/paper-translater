@@ -34,7 +34,7 @@ class Worker:
 
     def publish_paper(self, paper_id: str) -> None:
         if paper := self.store.paper(paper_id):
-            keys = ("status", "error", "done", "total", "failed")
+            keys = ("status", "error", "done", "total", "failed", "model")
             self.publish(paper_id, {"type": "paper", **{key: paper[key] for key in keys}})
 
     async def run(self) -> None:
@@ -54,7 +54,7 @@ class Worker:
         try:
             self.store.set_status(paper_id, "translating")
             self.publish_paper(paper_id)
-            await self.server.start()
+            await self.server.start(self.store.paper(paper_id)["model"])
             while True:
                 paper = self.store.paper(paper_id)
                 if paper is None or paper["status"] != "translating":

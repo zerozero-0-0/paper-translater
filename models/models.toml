@@ -1,12 +1,22 @@
-# モデルと llama serve の設定はこのファイルに一元化する
-active = "plamo-8b"
+# モデルと llama.cpp の設定はこのファイルに一元化する
+default = "plamo-8b"
 
 [models.plamo-8b]
+label = "8B"
+repo = "pfnet/plamo-3-translate-8b-GGUF"
 file = "plamo-3-translate-8b-Q4_K_M.gguf"
-template = "plamo3-notools.jinja"
+# 0.8B に下書きさせる投機的デコーディング。出力は変わらず生成が約 2 倍速くなる
+draft = "plamo-0.8b"
+draft_max = 6
+
+[models.plamo-0_8b]
+label = "0.8B"
+repo = "pfnet/plamo-3-translate-0.8b-GGUF"
+file = "plamo-3-translate-0.8b-Q4_K_M.gguf"
 
 [server]
-binary = "~/.local/bin/llama"
+# auto は llama か llama-server を自動で探す。パスを直接書いてもよい
+binary = "auto"
 port = 18080
 ctx_size = 8192
 # 翻訳が終わってからモデルをメモリから降ろすまでの秒数

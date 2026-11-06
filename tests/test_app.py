@@ -83,3 +83,33 @@ def test_requests_from_other_hosts_are_rejected(client):
 
 def test_static_files_are_revalidated(client):
     assert client.get("/app.js").headers["cache-control"] == "no-cache"
+
+
+def test_models_report_availability(client, config):
+    config.models["small"].path.touch()
+
+    data = client.get("/api/models").json()
+
+    assert data["default"] == "plamo-8b"
+    assert {m["label"]: m["available"] for m in data["models"]} == {"8B": False, "0.8B": True}
+
+
+def test_upload_uses_selected_model(client, server, pdf_bytes):
+    files = {"file": ("paper.pdf", pdf_bytes, "application/pdf")}
+    paper_id = client.post("/api/papers", files=files, data={"model": "small"}).json()["id"]
+
+    assert wait_until_done(client, paper_id)["model"] == "small"
+    assert server.started_with == "small"
+
+
+def test_unknown_model_is_rejected(client, pdf_bytes):
+    files = {"file": ("paper.pdf", pdf_bytes, "application/pdf")}
+
+    assert client.post("/api/papers", files=files, data={"model": "nope"}).status_code == 400
+
+
+def test_export_states_it_is_machine_translated(client, pdf_bytes):
+    paper_id = upload(client, pdf_bytes).json()["id"]
+    wait_until_done(client, paper_id)
+
+    assert "Built with PLaMo" in client.get(f"/api/papers/{paper_id}/export.md").text

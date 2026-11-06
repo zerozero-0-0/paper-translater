@@ -3,7 +3,7 @@ from pathlib import Path
 import pymupdf
 import pytest
 
-from paper_translator.config import Config
+from paper_translator.config import Config, Model
 from paper_translator.llm import Translation
 
 
@@ -15,8 +15,9 @@ class FakeServer:
         self.calls: list[str] = []
         self.failures: dict[str, Exception | Translation] = {}
 
-    async def start(self) -> None:
+    async def start(self, model: str) -> None:
         self.running = True
+        self.started_with = model
 
     async def stop(self) -> None:
         self.running = False
@@ -35,9 +36,12 @@ class FakeServer:
 @pytest.fixture
 def config(tmp_path: Path) -> Config:
     return Config(
-        binary=Path("llama"),
-        model=Path("model.gguf"),
-        template=Path("template.jinja"),
+        binary="auto",
+        models={
+            "plamo-8b": Model("plamo-8b", "8B", "repo/8b", tmp_path / "8b.gguf", "small", 6),
+            "small": Model("small", "0.8B", "repo/small", tmp_path / "small.gguf"),
+        },
+        default_model="plamo-8b",
         port=0,
         ctx_size=4096,
         idle_stop_seconds=1,
