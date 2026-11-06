@@ -71,11 +71,11 @@ def to_markdown(segments: list[dict]) -> str:
     return "\n\n".join(lines) + "\n"
 
 
-def create_app(config: Config) -> FastAPI:
+def create_app(config: Config, server: LlamaServer | None = None) -> FastAPI:
     papers_dir = config.data_dir / "papers"
     papers_dir.mkdir(parents=True, exist_ok=True)
     store = Store(config.data_dir / "app.db")
-    server = LlamaServer(config)
+    server = server or LlamaServer(config)
     worker = Worker(config, store, server)
 
     @asynccontextmanager
