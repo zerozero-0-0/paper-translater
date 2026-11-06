@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Paper Translator</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-screen="library">
+  <svg hidden aria-hidden="true">
+    <symbol id="icon-back" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5"/></symbol>
+    <symbol id="icon-pause" viewBox="0 0 16 16"><path d="M5.5 3.5v9M10.5 3.5v9"/></symbol>
+    <symbol id="icon-play" viewBox="0 0 16 16"><path d="M5.5 3.5v9l7-4.5z"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 16 16"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></symbol>
+    <symbol id="icon-link" viewBox="0 0 16 16"><path d="M6.5 9.5a2.5 2.5 0 0 0 3.5 0l2.5-2.5A2.5 2.5 0 0 0 9 3.5l-1 1M9.5 6.5a2.5 2.5 0 0 0-3.5 0L3.5 9A2.5 2.5 0 0 0 7 12.5l1-1"/></symbol>
+    <symbol id="icon-upload" viewBox="0 0 16 16"><path d="M8 10.5v-8M4.5 6 8 2.5 11.5 6M3 13.5h10"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 16 16"><path d="m4 4 8 8M12 4l-8 8"/></symbol>
+    <symbol id="icon-trash" viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5v-2h3v2M4.5 4.5l.5 9h6l.5-9"/></symbol>
+  </svg>
+
+  <header class="bar">
+    <a class="brand" href="#">
+      <svg class="icon back-icon" aria-hidden="true"><use href="#icon-back"/></svg>
+      <span>Paper Translator</span>
+    </a>
+    <div id="controls" class="controls" hidden>
+      <span id="progress-label" class="progress-label"></span>
+      <div class="view-toggle" role="group" aria-label="表示する言語">
+        <button id="view-ja" type="button" aria-pressed="true">日</button>
+        <button id="view-en" type="button" aria-pressed="false">英</button>
+      </div>
+      <button id="sync" class="icon-button" type="button" title="左右のスクロールを連動" aria-label="左右のスクロールを連動" aria-pressed="true">
+        <svg class="icon" aria-hidden="true"><use href="#icon-link"/></svg>
+      </button>
+      <button id="toggle" class="icon-button" type="button">
+        <span class="icon-swap">
+          <svg class="icon pause-icon" aria-hidden="true"><use href="#icon-pause"/></svg>
+          <svg class="icon play-icon" aria-hidden="true"><use href="#icon-play"/></svg>
+        </span>
+        <span class="toggle-label">再開</span>
+      </button>
+      <a id="export" class="icon-button" title="Markdown で保存" aria-label="Markdown で保存" download>
+        <svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg>
+      </a>
+    </div>
+    <div id="progress" class="progress"><div id="progress-bar"></div></div>
+  </header>
+
+  <main id="library" class="library">
+    <h1>論文</h1>
+    <button id="open-file" class="drop-panel" type="button">
+      <svg class="icon" aria-hidden="true"><use href="#icon-upload"/></svg>
+      <strong>PDF をドロップ</strong>
+      <span>またはクリックして選択。翻訳はこの Mac の中だけで行います</span>
+    </button>
+    <input id="file" type="file" accept="application/pdf" hidden>
+    <p id="message" class="message" role="status"></p>
+    <ul id="papers" class="papers"></ul>
+    <p id="empty" class="empty" hidden>まだ論文がありません。</p>
+  </main>
+
+  <main id="reader" class="reader" data-view="ja" hidden>
+    <section id="pages" class="pane pages" aria-label="原文"></section>
+    <section id="segments" class="pane segments" aria-label="訳文"></section>
+  </main>
+
+  <aside id="citation" class="citation" aria-label="参考文献">
+    <div class="citation-head">
+      <span>参考文献</span>
+      <button id="citation-jump" class="text-button" type="button">一覧で見る</button>
+      <button id="citation-close" class="icon-button" type="button" aria-label="閉じる">
+        <svg class="icon" aria-hidden="true"><use href="#icon-close"/></svg>
+      </button>
+    </div>
+    <p id="citation-text"></p>
+  </aside>
+
+  <div class="drop-overlay" aria-hidden="true"><p>ドロップして翻訳を始める</p></div>
+
+  <script src="vendor/katex/katex.min.js"></script>
+  <script src="math.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

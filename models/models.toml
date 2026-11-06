@@ -1,0 +1,21 @@
+# モデルと llama serve の設定はこのファイルに一元化する
+active = "plamo-8b"
+
+[models.plamo-8b]
+file = "plamo-3-translate-8b-Q4_K_M.gguf"
+template = "plamo3-notools.jinja"
+
+[server]
+binary = "~/.local/bin/llama"
+port = 18080
+ctx_size = 8192
+# 翻訳が終わってからモデルをメモリから降ろすまでの秒数
+idle_stop_seconds = 60
+
+[translation]
+source_lang = "en"
+target_lang = "ja"
+form = "plain"
+# 文脈として渡す直前の段落数。訳語は glossary.toml で揃えるので既定は 0
+# 増やすと入力処理の分だけ遅くなる
+history = 0

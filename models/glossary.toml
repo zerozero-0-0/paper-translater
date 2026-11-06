@@ -1,0 +1,151 @@
+# 訳語集。原文に語が含まれる段落にだけ、該当する項目をモデルへ渡す。
+# 語境界で照合し、大文字小文字と語尾の複数形 s は無視する。
+# 技術用語は英語の読みをカタカナにする。日本語訳が定着した一般語（勾配、学習率など）は日本語のまま。
+
+[[term]]
+source = "attention"
+target = "アテンション"
+
+[[term]]
+source = "self-attention"
+target = "セルフアテンション"
+
+[[term]]
+source = "multi-head attention"
+target = "マルチヘッドアテンション"
+
+[[term]]
+source = "sequence"
+target = "シーケンス"
+
+[[term]]
+source = "encoder"
+target = "エンコーダ"
+
+[[term]]
+source = "decoder"
+target = "デコーダ"
+
+[[term]]
+source = "recurrent"
+target = "リカレント"
+
+[[term]]
+source = "recurrence"
+target = "リカレンス"
+
+[[term]]
+source = "convolution"
+target = "コンボリューション"
+
+[[term]]
+source = "convolutional"
+target = "コンボリューション"
+
+[[term]]
+source = "embedding"
+target = "エンベディング"
+
+[[term]]
+source = "positional encoding"
+target = "ポジショナルエンコーディング"
+
+[[term]]
+source = "feed-forward"
+target = "フィードフォワード"
+
+[[term]]
+source = "residual connection"
+target = "レジデュアルコネクション"
+
+[[term]]
+source = "layer normalization"
+target = "レイヤーノーマライゼーション"
+
+[[term]]
+source = "dropout"
+target = "ドロップアウト"
+
+[[term]]
+source = "hidden state"
+target = "ヒドゥンステート"
+
+[[term]]
+source = "dot product"
+target = "ドットプロダクト"
+
+[[term]]
+source = "softmax"
+target = "softmax"
+
+[[term]]
+source = "token"
+target = "トークン"
+
+[[term]]
+source = "vocabulary"
+target = "語彙"
+
+[[term]]
+source = "pre-training"
+target = "プレトレーニング"
+
+[[term]]
+source = "pre-trained"
+target = "プレトレーニング済み"
+
+[[term]]
+source = "fine-tuning"
+target = "ファインチューニング"
+
+[[term]]
+source = "language model"
+target = "言語モデル"
+
+[[term]]
+source = "machine translation"
+target = "機械翻訳"
+
+[[term]]
+source = "learning rate"
+target = "学習率"
+
+[[term]]
+source = "hyperparameter"
+target = "ハイパーパラメータ"
+
+[[term]]
+source = "loss function"
+target = "損失関数"
+
+[[term]]
+source = "gradient"
+target = "勾配"
+
+[[term]]
+source = "baseline"
+target = "ベースライン"
+
+[[term]]
+source = "benchmark"
+target = "ベンチマーク"
+
+[[term]]
+source = "ablation"
+target = "アブレーション"
+
+[[term]]
+source = "state-of-the-art"
+target = "最先端"
+
+[[term]]
+source = "inference"
+target = "推論"
+
+[[term]]
+source = "dot-product"
+target = "ドットプロダクト"
+
+[[term]]
+source = "sequence-aligned"
+target = "シーケンス整合型"
