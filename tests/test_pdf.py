@@ -124,6 +124,11 @@ def test_line_text_ignores_small_text_when_choosing_the_baseline():
     assert _line_text(spans) == "ℝ^dmodel"
 
 
+def test_line_text_keeps_the_space_after_a_script():
+    spans = [span("values of "), span("d"), span("k", 7.0, 101.5), span(" ", 7.0), span("the two", font="Nimbus")]
+    assert _line_text(spans) == "values of d_k the two"
+
+
 def test_line_text_keeps_footnote_marker_in_prose_font():
     spans = [span("small gradients", font="Nimbus"), span("4", 7.0, 96.0, "Nimbus"), span(".", font="Nimbus")]
     assert _line_text(spans) == "small gradients4."

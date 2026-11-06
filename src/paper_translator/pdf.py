@@ -75,6 +75,7 @@ def _line_text(spans: list[dict]) -> str:
     marker = ""
     script_size = script_y = 0.0
     previous = ""
+    gap = ""
 
     def flush() -> None:
         nonlocal text, marker, previous
@@ -89,7 +90,9 @@ def _line_text(spans: list[dict]) -> str:
         raw = span["text"]
         body = raw.strip()
         if not body:
-            if not script:
+            if script:
+                gap = raw
+            else:
                 text += raw
             continue
         font = span["font"]
@@ -106,13 +109,16 @@ def _line_text(spans: list[dict]) -> str:
                 current = "^"
         if not current:
             flush()
-            text += raw
+            text += gap + raw
+            gap = ""
             previous = ""
         elif script and current == marker:
+            gap = ""
             nested = span["size"] <= script_size * 0.85 and span["origin"][1] > script_y + 0.3
             script.append(f"_{body}" if nested else body)
         else:
             flush()
+            gap = ""
             if current == previous:
                 text = text.rstrip() + body
                 continue
