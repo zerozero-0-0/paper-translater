@@ -149,3 +149,7 @@ target = "ドットプロダクト"
 [[term]]
 source = "sequence-aligned"
 target = "シーケンス整合型"
+
+[[term]]
+source = "embedding layer"
+target = "埋め込み層"
