@@ -36,11 +36,11 @@ target = "リカレンス"
 
 [[term]]
 source = "convolution"
-target = "コンボリューション"
+target = "畳み込み"
 
 [[term]]
 source = "convolutional"
-target = "コンボリューション"
+target = "畳み込み"
 
 [[term]]
 source = "embedding"
@@ -68,7 +68,7 @@ target = "ドロップアウト"
 
 [[term]]
 source = "hidden state"
-target = "ヒドゥンステート"
+target = "隠し状態"
 
 [[term]]
 source = "dot product"
