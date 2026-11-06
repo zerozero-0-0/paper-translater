@@ -44,7 +44,7 @@ target = "畳み込み"
 
 [[term]]
 source = "embedding"
-target = "エンベディング"
+target = "埋め込み"
 
 [[term]]
 source = "positional encoding"
