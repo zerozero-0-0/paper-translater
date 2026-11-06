@@ -9,7 +9,7 @@ file = "plamo-3-translate-8b-Q4_K_M.gguf"
 draft = "plamo-0.8b"
 draft_max = 6
 
-[models.plamo-0_8b]
+[models."plamo-0.8b"]
 label = "0.8B"
 repo = "pfnet/plamo-3-translate-0.8b-GGUF"
 file = "plamo-3-translate-0.8b-Q4_K_M.gguf"

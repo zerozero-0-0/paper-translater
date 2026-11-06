@@ -59,6 +59,11 @@ def load_config(root: Path = ROOT) -> Config:
         )
         for key, model in raw["models"].items()
     }
+    for model in models.values():
+        if model.draft and model.draft not in models:
+            raise ValueError(f"{model.key} の draft に指定した {model.draft} が models にありません")
+    if raw["default"] not in models:
+        raise ValueError(f"default に指定した {raw['default']} が models にありません")
     return Config(
         binary=server["binary"],
         models=models,
