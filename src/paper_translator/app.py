@@ -53,7 +53,7 @@ def render_segment(source: Path, boxes: list[list[float]]) -> bytes:
         return document[int(page)].get_pixmap(dpi=EQUATION_DPI, clip=clip + (-4, -4, 4, 4)).tobytes("png")
 
 
-def to_markdown(paper: dict, segments: list[dict]) -> str:
+def to_markdown(segments: list[dict]) -> str:
     lines = []
     for segment in segments:
         text = segment["translation"] or segment["source"]
@@ -174,7 +174,8 @@ def create_app(config: Config) -> FastAPI:
 
     @app.get("/api/papers/{paper_id}/export.md")
     def export(paper_id: str) -> PlainTextResponse:
-        return PlainTextResponse(to_markdown(get_paper(paper_id), store.segments(paper_id)), media_type="text/markdown")
+        get_paper(paper_id)
+        return PlainTextResponse(to_markdown(store.segments(paper_id)), media_type="text/markdown")
 
     @app.get("/api/papers/{paper_id}/events")
     async def events(paper_id: str) -> StreamingResponse:

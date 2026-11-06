@@ -16,7 +16,9 @@ from paper_translator.pdf import (
 
 
 def test_join_lines_repairs_line_break_hyphen():
-    assert _join_lines(["dot-product (multi-", "plicative) attention"], set()) == "dot-product (multiplicative) attention"
+    assert (
+        _join_lines(["dot-product (multi-", "plicative) attention"], set()) == "dot-product (multiplicative) attention"
+    )
 
 
 def test_join_lines_keeps_real_compound():
@@ -24,7 +26,10 @@ def test_join_lines_keeps_real_compound():
 
 
 def test_join_lines_repairs_fraction_sharing_a_line_with_prose():
-    assert _join_lines(["the scaling factor of 1 ^√_dk. Additive attention"], set()) == "the scaling factor of 1/√dk. Additive attention"
+    assert (
+        _join_lines(["the scaling factor of 1 ^√_dk. Additive attention"], set())
+        == "the scaling factor of 1/√dk. Additive attention"
+    )
 
 
 def test_merge_joins_paragraph_split_across_pages():
@@ -85,7 +90,14 @@ def span(text, size=10.0, y=100.0, font="CMMI10"):
 
 
 def test_line_text_restores_subscript_and_superscript():
-    spans = [span("values of dimension "), span("d"), span("k", 7.0, 101.5), span(" and "), span("W"), span("O", 7.0, 96.0)]
+    spans = [
+        span("values of dimension "),
+        span("d"),
+        span("k", 7.0, 101.5),
+        span(" and "),
+        span("W"),
+        span("O", 7.0, 96.0),
+    ]
     assert _line_text(spans) == "values of dimension d_k and W^O"
 
 
@@ -95,7 +107,11 @@ def test_line_text_keeps_footnote_marker_in_prose_font():
 
 
 def test_join_fraction_stacks_numerator_over_denominator():
-    rows = [("scale by", (108, 604, 437, 615), 10.0), ("1", (446, 603, 450, 610), 7.0), ("√d_k", (441, 605, 459, 620), 7.0)]
+    rows = [
+        ("scale by", (108, 604, 437, 615), 10.0),
+        ("1", (446, 603, 450, 610), 7.0),
+        ("√d_k", (441, 605, 459, 620), 7.0),
+    ]
     assert [row[0] for row in _join_fraction(rows)] == ["scale by", "1/√d_k"]
 
 
@@ -141,15 +157,26 @@ def reference(text, x0=72.0, page=10):
 
 
 def test_merge_references_uses_numbers():
-    segments = [reference("[1] Jimmy Ba. Layer normali-"), reference("zation. arXiv, 2016."), reference("[2] Dzmitry Bahdanau.")]
+    segments = [
+        reference("[1] Jimmy Ba. Layer normali-"),
+        reference("zation. arXiv, 2016."),
+        reference("[2] Dzmitry Bahdanau."),
+    ]
     merged = _merge_references(segments, set(), 612)
     assert [s.source for s in merged] == ["[1] Jimmy Ba. Layer normalization. arXiv, 2016.", "[2] Dzmitry Bahdanau."]
 
 
 def test_merge_references_uses_hanging_indent_without_numbers():
-    segments = [reference("Alan Akbik, Duncan Blythe."), reference("2018. Contextual strings.", 83.0), reference("Rie Ando and Tong Zhang. 2005.")]
+    segments = [
+        reference("Alan Akbik, Duncan Blythe."),
+        reference("2018. Contextual strings.", 83.0),
+        reference("Rie Ando and Tong Zhang. 2005."),
+    ]
     merged = _merge_references(segments, set(), 612)
-    assert [s.source for s in merged] == ["Alan Akbik, Duncan Blythe. 2018. Contextual strings.", "Rie Ando and Tong Zhang. 2005."]
+    assert [s.source for s in merged] == [
+        "Alan Akbik, Duncan Blythe. 2018. Contextual strings.",
+        "Rie Ando and Tong Zhang. 2005.",
+    ]
 
 
 def test_reference_index_builds_number_and_author_year_keys():
@@ -166,5 +193,7 @@ def test_reference_index_builds_number_and_author_year_keys():
 
 
 def test_reference_index_handles_single_author_without_comma():
-    segments = [{"kind": "reference", "idx": 1, "source": "Wilson L Taylor. 1953. Cloze procedure. Journalism Bulletin."}]
+    segments = [
+        {"kind": "reference", "idx": 1, "source": "Wilson L Taylor. 1953. Cloze procedure. Journalism Bulletin."}
+    ]
     assert reference_index(segments)["authors"] == {"taylor 1953": 1}

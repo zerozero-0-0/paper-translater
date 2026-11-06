@@ -15,7 +15,10 @@ dependencies = [
 paper-translator = "paper_translator.__main__:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = [
+    "pytest>=8",
+    "ruff>=0.17.4",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -26,3 +29,10 @@ packages = ["src/paper_translator"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["src/paper_translator/static/vendor"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]

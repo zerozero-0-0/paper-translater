@@ -216,7 +216,9 @@ def _attach_visuals(page: "PageContent", tables_above_caption: bool) -> None:
         left, right = page.rect.x0, page.rect.x1
         middle = page.rect.width / 2
         prose = [b for b in page.kept if len(b.text) > 40]
-        two_columns = sum(b.bbox[2] < middle + 10 for b in prose) >= 2 and sum(b.bbox[0] > middle - 10 for b in prose) >= 2
+        two_columns = (
+            sum(b.bbox[2] < middle + 10 for b in prose) >= 2 and sum(b.bbox[0] > middle - 10 for b in prose) >= 2
+        )
         if two_columns and x1 < middle + 10:
             right = middle
         elif two_columns and x0 > middle - 10:
@@ -348,11 +350,7 @@ def _classify(blocks: list[Block], body_size: float, page_heights: list[float]) 
             kind = "reference"
         elif _is_fragment(text):
             kind = "equation"
-        elif (
-            not in_abstract
-            and block.size <= body_size - 0.7
-            and block.bbox[1] > page_heights[block.page] * 0.5
-        ):
+        elif not in_abstract and block.size <= body_size - 0.7 and block.bbox[1] > page_heights[block.page] * 0.5:
             kind = "footnote"
         else:
             kind = "text"

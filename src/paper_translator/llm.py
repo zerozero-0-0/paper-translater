@@ -87,7 +87,10 @@ class LlamaServer:
         messages = []
         if len(text) + sum(len(s) + len(t) for s, t in history) < HISTORY_CHAR_LIMIT:
             for source, translation in history:
-                messages += [{"role": "user", "content": clean(source)}, {"role": "assistant", "content": clean(translation)}]
+                messages += [
+                    {"role": "user", "content": clean(source)},
+                    {"role": "assistant", "content": clean(translation)},
+                ]
         messages.append({"role": "user", "content": clean(text)})
 
         kwargs = {"source_lang": config.source_lang, "target_lang": config.target_lang, "form": config.form}
@@ -115,11 +118,7 @@ class LlamaServer:
 
 
 def matching_terms(text: str, glossary: tuple[dict[str, str], ...]) -> list[dict[str, str]]:
-    return [
-        term
-        for term in glossary
-        if re.search(rf"\b{re.escape(term['source'])}s?\b", text, re.IGNORECASE)
-    ]
+    return [term for term in glossary if re.search(rf"\b{re.escape(term['source'])}s?\b", text, re.IGNORECASE)]
 
 
 def clean(text: str) -> str:
